@@ -11,7 +11,9 @@ from datetime import datetime, timedelta
 import os
 from dotenv import load_dotenv
 import nltk
-
+from werkzeug.utils import secure_filename
+from flask import send_file
+from sqlalchemy import text
 from models import db, User, UserProfile, Recommendation, ChatMessage, PredefinedPath, AssessmentHistory
 from recommendation_engine import AdvancedRecommendationEngine
 from chatbot import AdvancedChatbot
@@ -34,6 +36,33 @@ app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(days=30)
 db.init_app(app)
 jwt = JWTManager(app)
 CORS(app, resources={r'/api/*': {'origins': ['http://localhost:3000', 'http://localhost:3001', 'http://127.0.0.1:3000', 'http://127.0.0.1:3001']}}, supports_credentials=True)
+
+
+def ensure_resume_column():
+    """Ensure resume_path column exists in user_profiles table."""
+    database_uri = app.config.get('SQLALCHEMY_DATABASE_URI', '')
+
+    # Only run for SQLite
+    if not database_uri.startswith('sqlite'):
+        return
+
+    with app.app_context():
+        try:
+            with db.engine.connect() as conn:
+                # Check existing columns
+                result = conn.execute(text("PRAGMA table_info(user_profiles)"))
+                columns = [row[1] for row in result]
+
+                if 'resume_path' not in columns:
+                    print('[INFO] Adding missing column resume_path')
+                    conn.execute(text("ALTER TABLE user_profiles ADD COLUMN resume_path TEXT"))
+                    conn.commit()
+
+        except Exception as e:
+            print(f'[WARN] Could not ensure resume_path column: {e}')
+
+# Ensure the DB has expected columns (best-effort)
+ensure_resume_column()
 
 # Ensure app context for requests
 @app.before_request
@@ -287,6 +316,66 @@ def get_profile():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@app.route('/api/profile/upload_resume', methods=['POST'])
+@jwt_required()
+def upload_resume():
+    """Upload a resume PDF for the current user. Expects multipart/form-data with 'resume' file."""
+    try:
+        user_id = get_jwt_identity()
+
+        if 'resume' not in request.files:
+            return jsonify({'success': False, 'error': 'No resume file provided'}), 400
+
+        resume_file = request.files['resume']
+        if resume_file.filename == '':
+            return jsonify({'success': False, 'error': 'No selected file'}), 400
+
+        filename = secure_filename(resume_file.filename)
+        save_dir = os.path.join(app.root_path, 'instance', 'resumes')
+        os.makedirs(save_dir, exist_ok=True)
+        timestamp = int(datetime.utcnow().timestamp())
+        save_path = os.path.join(save_dir, f"user_{user_id}_{timestamp}_{filename}")
+
+        resume_file.save(save_path)
+
+        # Save path to user's latest profile record
+        profile = UserProfile.query.filter_by(user_id=user_id).order_by(UserProfile.created_at.desc()).first()
+        if profile:
+            # store relative path from app root for portability
+            rel_path = os.path.relpath(save_path, app.root_path)
+            profile.resume_path = rel_path
+            db.session.add(profile)
+            db.session.commit()
+
+        return jsonify({'success': True, 'message': 'Resume uploaded', 'path': save_path}), 200
+
+    except Exception as e:
+        print(f'[ERROR] upload_resume exception: {str(e)}')
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/profile/resume', methods=['GET'])
+@jwt_required()
+def download_resume():
+    """Return the current user's uploaded resume file as an attachment."""
+    try:
+        user_id = get_jwt_identity()
+        profile = UserProfile.query.filter_by(user_id=user_id).order_by(UserProfile.created_at.desc()).first()
+        if not profile or not profile.resume_path:
+            return jsonify({'success': False, 'error': 'No resume found for user'}), 404
+
+        # Construct absolute path
+        file_path = os.path.join(app.root_path, profile.resume_path)
+        if not os.path.exists(file_path):
+            return jsonify({'success': False, 'error': 'Resume file not found on server'}), 404
+
+        return send_file(file_path, as_attachment=True, download_name=os.path.basename(file_path), mimetype='application/pdf')
+
+    except Exception as e:
+        print(f'[ERROR] download_resume exception: {str(e)}')
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 # ============================================================
 # RECOMMENDATION ROUTES
 # ============================================================
@@ -305,11 +394,25 @@ def get_recommendations():
             print(f'[ERROR] No profile found for user {user_id}')
             return jsonify({'success': False, 'error': 'Update your profile first'}), 400
 
-        # Convert to dict for engine
+        # Convert stored profile to dict for engine
         profile_dict = profile.to_dict()
+
+        # Prefer assessment data sent in the request body (immediate questionnaire result)
+        try:
+            request_data = request.get_json(silent=True) or {}
+        except Exception:
+            request_data = {}
+
+        # Merge request data over stored profile so submitted assessment values take precedence
+        if request_data:
+            # Only copy known fields to avoid polluting the profile dict
+            for k, v in request_data.items():
+                if v is not None:
+                    profile_dict[k] = v
+
         print(f'[INFO] Generating recommendations for user {user_id} with profile: {profile_dict}')
 
-        # Generate recommendations
+        # Generate recommendations using merged profile (assessment data overrides stored profile)
         recommendations = recommendation_engine.get_recommendations(profile_dict)
 
         # Validate recommendations
@@ -398,6 +501,33 @@ def compare_recommendations(path_name, compare_with):
         }), 200
 
     except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/skillgap', methods=['POST'])
+@jwt_required()
+def compute_skill_gap():
+    """On-demand skill gap analysis endpoint.
+
+    Request JSON: { user_skills: <list|string>, career_name: <string>, required_skills: <list|string> }
+    """
+    try:
+        data = request.get_json() or {}
+        user_id = get_jwt_identity()
+
+        user_skills = data.get('user_skills')
+        career_name = data.get('career_name') or data.get('career')
+        required_skills = data.get('required_skills') or data.get('required')
+
+        if not career_name:
+            return jsonify({'success': False, 'error': 'career_name is required'}), 400
+
+        analysis = recommendation_engine.compute_skill_gap(user_skills, career_name, required_skills)
+
+        return jsonify({'success': True, 'skill_gap': analysis}), 200
+
+    except Exception as e:
+        print(f'[ERROR] compute_skill_gap exception: {str(e)}')
         return jsonify({'success': False, 'error': str(e)}), 500
 
 

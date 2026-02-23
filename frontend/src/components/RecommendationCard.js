@@ -3,10 +3,11 @@
  * Individual career path recommendation card with expandable details
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import apiService from '../services/api';
 
-const RecommendationCard = ({ recommendation, isExpanded, onToggle }) => {
+const RecommendationCard = ({ recommendation, isExpanded, onToggle, profile }) => {
   const getConfidenceColor = (confidence) => {
     switch (confidence) {
       case 'High':
@@ -17,6 +18,31 @@ const RecommendationCard = ({ recommendation, isExpanded, onToggle }) => {
         return '#3b82f6';
       default:
         return '#6b7280';
+    }
+  };
+
+  const [remoteSkillGap, setRemoteSkillGap] = useState(null);
+  const [loadingSkillGap, setLoadingSkillGap] = useState(false);
+  const [skillGapError, setSkillGapError] = useState(null);
+
+  const fetchRemoteSkillGap = async (e) => {
+    e && e.stopPropagation();
+    setSkillGapError(null);
+    setLoadingSkillGap(true);
+    try {
+      const userSkills = (profile && (profile.skills || profile.preferred_domains)) || [];
+      const payload = {
+        user_skills: userSkills,
+        career_name: recommendation.career_path,
+        required_skills: recommendation.required_skills || recommendation.requiredSkills || ''
+      };
+
+      const res = await apiService.skillGap(payload);
+      setRemoteSkillGap(res.data.skill_gap || null);
+    } catch (err) {
+      setSkillGapError(err?.response?.data?.error || err.message || 'Failed to compute skill gap');
+    } finally {
+      setLoadingSkillGap(false);
     }
   };
 
@@ -94,6 +120,56 @@ const RecommendationCard = ({ recommendation, isExpanded, onToggle }) => {
                     <li key={idx}>{area}</li>
                   ))}
                 </ul>
+              </div>
+            )}
+
+            {/* Skill Gap Analysis (optional) */}
+            {recommendation.skill_gap && (
+              <div className="detail-section">
+                <h4>📊 Skill Gap Analysis</h4>
+                <p><strong>Career:</strong> {recommendation.skill_gap.career || recommendation.career_path}</p>
+                <p><strong>Fit Score:</strong> {typeof recommendation.skill_gap.fit_score !== 'undefined' ? `${recommendation.skill_gap.fit_score}%` : `${recommendation.alignment_score}%`}</p>
+                <p><strong>Matched Skills:</strong> {recommendation.skill_gap.matched && recommendation.skill_gap.matched.length > 0 ? recommendation.skill_gap.matched.join(', ') : 'None identified'}</p>
+                <p><strong>Missing Skills:</strong> {recommendation.skill_gap.missing && recommendation.skill_gap.missing.length > 0 ? recommendation.skill_gap.missing.join(', ') : 'None identified'}</p>
+                {recommendation.skill_gap.why && (
+                  <div style={{marginTop:8}}>
+                    <h5>Why This Career Suits You</h5>
+                    <p>{recommendation.skill_gap.why}</p>
+                  </div>
+                )}
+
+                {recommendation.skill_gap.learning_roadmap && Array.isArray(recommendation.skill_gap.learning_roadmap) && recommendation.skill_gap.learning_roadmap.length > 0 && (
+                  <div style={{marginTop:8}}>
+                    <h5>Learning Roadmap</h5>
+                    <ol>
+                      {recommendation.skill_gap.learning_roadmap.map((step, idx) => (
+                        <li key={idx}>{step}</li>
+                      ))}
+                    </ol>
+                  </div>
+                )}
+                <div style={{marginTop:10}}>
+                  <button className="btn btn-primary" onClick={fetchRemoteSkillGap}>
+                    {loadingSkillGap ? 'Computing...' : 'Compute Skill Gap (server)'}
+                  </button>
+                  {skillGapError && <p style={{color:'var(--danger)', marginTop:8}}>{skillGapError}</p>}
+                  {remoteSkillGap && (
+                    <div style={{marginTop:12}}>
+                      <h5>Server Analysis</h5>
+                      <p><strong>Fit Score:</strong> {remoteSkillGap.fit_score}%</p>
+                      <p><strong>Matched:</strong> {remoteSkillGap.matched && remoteSkillGap.matched.length ? remoteSkillGap.matched.join(', ') : 'None'}</p>
+                      <p><strong>Missing:</strong> {remoteSkillGap.missing && remoteSkillGap.missing.length ? remoteSkillGap.missing.join(', ') : 'None'}</p>
+                      {remoteSkillGap.learning_roadmap && (
+                        <div>
+                          <h6>Roadmap</h6>
+                          <ol>
+                            {remoteSkillGap.learning_roadmap.map((s, i) => <li key={i}>{s}</li>)}
+                          </ol>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 

@@ -66,6 +66,17 @@ const apiService = {
   healthCheck: () => api.get('/health'),
   getCareerPaths: () => api.get('/career-paths'),
   getDomains: () => api.get('/domains'),
+  // ==================== SKILL GAP ====================
+  skillGap: (data) => api.post('/skillgap', data),
+  // ==================== UPLOADS ====================
+  uploadResume: (file) => {
+    const form = new FormData();
+    form.append('resume', file);
+    return api.post('/profile/upload_resume', form, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+  },
+  downloadResume: () => api.get('/profile/resume', { responseType: 'arraybuffer' }),
 };
 
 export default apiService;

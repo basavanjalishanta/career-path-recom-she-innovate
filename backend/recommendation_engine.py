@@ -215,6 +215,177 @@ class AdvancedRecommendationEngine:
                 'Build network in startup ecosystem'
             ]
         }
+        ,
+        'Cybersecurity Analyst': {
+            'description': 'Monitors systems and responds to security incidents, analyzes threats and vulnerabilities',
+            'required_skills': {'coding': 0.20, 'math': 0.10, 'communication': 0.20, 'creativity': 0.15, 'domain': 0.35},
+            'related_domains': ['Cybersecurity', 'Networking', 'Cloud'],
+            'ideal_traits': ['analytical', 'meticulous', 'calm-under-pressure', 'curious'],
+            'salary_range': '$90k-$160k+',
+            'market_demand': 'high',
+            'job_titles': ['Security Analyst', 'SOC Analyst', 'Threat Analyst'],
+            'beginner_projects': [
+                'Set up a home lab and practice monitoring logs',
+                'Perform vulnerability scans on a test environment',
+                'Write incident response playbook for a mock breach'
+            ],
+            'intermediate_projects': [
+                'Design SIEM rules and alerts',
+                'Conduct tabletop incident response exercise',
+                'Automate alert triage with scripting'
+            ],
+            'learning_roadmap': [
+                'Learn networking fundamentals and protocols',
+                'Study system and log analysis',
+                'Master common security tooling (SIEM, IDS/IPS)',
+                'Practice incident response and threat hunting'
+            ]
+        },
+        'Cloud Engineer': {
+            'description': 'Designs, builds, and manages scalable cloud infrastructure and services',
+            'required_skills': {'coding': 0.20, 'math': 0.05, 'communication': 0.15, 'creativity': 0.10, 'domain': 0.50},
+            'related_domains': ['Cloud', 'DevOps', 'Infrastructure'],
+            'ideal_traits': ['systematic', 'reliable', 'collaborative', 'detail-oriented'],
+            'salary_range': '$100k-$180k+',
+            'market_demand': 'high',
+            'job_titles': ['Cloud Engineer', 'Cloud Architect', 'Site Reliability Engineer'],
+            'beginner_projects': [
+                'Deploy a simple web service to a cloud provider',
+                'Build infrastructure with IaC (Terraform/CloudFormation)',
+                'Set up basic monitoring and alerts'
+            ],
+            'intermediate_projects': [
+                'Design multi-region failover',
+                'Implement automated scaling and cost optimization',
+                'Migrate a service to cloud with minimal downtime'
+            ],
+            'learning_roadmap': [
+                'Learn one major cloud provider (AWS/GCP/Azure)',
+                'Master Infrastructure as Code and automation',
+                'Study networking and security in cloud',
+                'Practice deployment and monitoring patterns'
+            ]
+        },
+        'DevOps Engineer': {
+            'description': 'Builds CI/CD pipelines, automates deployments, and enables developer productivity',
+            'required_skills': {'coding': 0.25, 'math': 0.05, 'communication': 0.15, 'creativity': 0.10, 'domain': 0.45},
+            'related_domains': ['DevOps', 'Cloud', 'SRE'],
+            'ideal_traits': ['automation-focused', 'collaborative', 'efficient', 'problem-solver'],
+            'salary_range': '$95k-$170k+',
+            'market_demand': 'high',
+            'job_titles': ['DevOps Engineer', 'CI/CD Engineer', 'Platform Engineer'],
+            'beginner_projects': [
+                'Create a CI pipeline for a sample app',
+                'Automate deployments with scripts',
+                'Containerize an application with Docker'
+            ],
+            'intermediate_projects': [
+                'Implement full CI/CD with automated tests',
+                'Build self-service developer platform',
+                'Integrate security checks into pipeline'
+            ],
+            'learning_roadmap': [
+                'Learn containerization and orchestration (Docker, Kubernetes)',
+                'Master CI/CD tools and pipeline design',
+                'Automate observable deployments and rollbacks'
+            ]
+        },
+        'Machine Learning Engineer': {
+            'description': 'Productionizes machine learning models and builds scalable inference systems',
+            'required_skills': {'coding': 0.35, 'math': 0.30, 'creativity': 0.15, 'communication': 0.10, 'domain': 0.10},
+            'related_domains': ['AI', 'Data Science', 'MLOps'],
+            'ideal_traits': ['analytical', 'pragmatic', 'detail-oriented', 'curious'],
+            'salary_range': '$120k-$210k+',
+            'market_demand': 'high',
+            'job_titles': ['Machine Learning Engineer', 'ML Engineer', 'MLOps Engineer'],
+            'beginner_projects': [
+                'Train and evaluate a supervised model end-to-end',
+                'Experiment with feature engineering on a dataset',
+                'Build a model inference API'
+            ],
+            'intermediate_projects': [
+                'Deploy scalable inference with batching',
+                'Implement model monitoring and drift detection',
+                'Optimize model latency and throughput'
+            ],
+            'learning_roadmap': [
+                'Master ML fundamentals and model evaluation',
+                'Learn model deployment and serving frameworks',
+                'Study MLOps patterns and scalable architectures'
+            ]
+        },
+        'Blockchain Developer': {
+            'description': 'Designs and implements decentralized applications and smart contracts',
+            'required_skills': {'coding': 0.45, 'math': 0.10, 'communication': 0.15, 'creativity': 0.15, 'domain': 0.15},
+            'related_domains': ['Blockchain', 'Security', 'Cryptography'],
+            'ideal_traits': ['detail-oriented', 'security-minded', 'innovative', 'persistent'],
+            'salary_range': '$100k-$200k+',
+            'market_demand': 'growing',
+            'job_titles': ['Blockchain Developer', 'Smart Contract Engineer', 'DApp Developer'],
+            'beginner_projects': [
+                'Write and deploy a simple smart contract',
+                'Build a small DApp interacting with a contract',
+                'Explore token standards and wallets'
+            ],
+            'intermediate_projects': [
+                'Audit and secure smart contracts',
+                'Design layer-2 interactions',
+                'Integrate off-chain data with oracles'
+            ],
+            'learning_roadmap': [
+                'Learn smart contract languages (Solidity, Vyper)',
+                'Study blockchain primitives and security',
+                'Build and deploy DApps on testnets'
+            ]
+        },
+        'Mobile App Developer': {
+            'description': 'Builds native and cross-platform mobile applications',
+            'required_skills': {'coding': 0.55, 'math': 0.05, 'communication': 0.15, 'creativity': 0.15, 'domain': 0.10},
+            'related_domains': ['Mobile', 'UI/UX', 'Web'],
+            'ideal_traits': ['user-focused', 'detail-oriented', 'creative', 'collaborative'],
+            'salary_range': '$85k-$160k+',
+            'market_demand': 'high',
+            'job_titles': ['Mobile Developer', 'iOS Developer', 'Android Developer', 'React Native Developer'],
+            'beginner_projects': [
+                'Build a simple todo app for mobile',
+                'Create a small cross-platform app with React Native',
+                'Implement local storage and simple navigation'
+            ],
+            'intermediate_projects': [
+                'Implement native features (camera, sensors)',
+                'Optimize performance and animations',
+                'Publish an app to app stores'
+            ],
+            'learning_roadmap': [
+                'Learn platform basics (Android/iOS) or cross-platform tools',
+                'Study mobile UI/UX and performance',
+                'Build and publish production-ready apps'
+            ]
+        },
+        'Software Engineer': {
+            'description': 'Designs and implements reliable software systems across stacks',
+            'required_skills': {'coding': 0.50, 'math': 0.10, 'communication': 0.20, 'creativity': 0.10, 'domain': 0.10},
+            'related_domains': ['Web', 'Systems', 'Cloud'],
+            'ideal_traits': ['pragmatic', 'collaborative', 'problem-solver', 'detail-oriented'],
+            'salary_range': '$90k-$180k+',
+            'market_demand': 'high',
+            'job_titles': ['Software Engineer', 'Backend Engineer', 'Systems Engineer'],
+            'beginner_projects': [
+                'Build a CLI or small backend service',
+                'Implement unit tests and CI',
+                'Create a small library or package'
+            ],
+            'intermediate_projects': [
+                'Design and implement scalable services',
+                'Optimize algorithms and performance',
+                'Lead a small engineering project'
+            ],
+            'learning_roadmap': [
+                'Master a programming language deeply',
+                'Study system design and architecture',
+                'Learn testing, observability, and deployment practices'
+            ]
+        }
     }
 
     def __init__(self):
@@ -231,10 +402,13 @@ class AdvancedRecommendationEngine:
         Returns:
             list: Top 3 recommendations with detailed explanations
         """
+        # Normalize profile so engine accepts both DB-shaped and form-shaped inputs
+        norm_profile = self._normalize_profile(profile)
+
         # Calculate scores for all paths
         path_scores = {}
         for path_name, path_config in self.paths.items():
-            score_data = self._calculate_path_score(profile, path_config)
+            score_data = self._calculate_path_score(norm_profile, path_config)
             path_scores[path_name] = score_data
 
         # Sort by alignment score
@@ -261,8 +435,13 @@ class AdvancedRecommendationEngine:
                 'intermediate_projects': path_config['intermediate_projects'][:2],
                 'learning_roadmap': path_config['learning_roadmap'],
 
-                # Guidance
-                'skill_gap_analysis': self._analyze_skill_gaps(profile, path_config),
+                # Guidance - include a server-side skill gap analysis derived from the user's profile
+                'skill_gap_analysis': self._analyze_skill_gaps(norm_profile, path_config),
+                'skill_gap': self.compute_skill_gap(
+                    user_skills=self._extract_user_skill_names(norm_profile),
+                    career_name=path_name,
+                    required_skills=list(path_config.get('required_skills', {}).keys())
+                ),
                 'timeline_estimate': self._estimate_timeline(profile, path_config),
 
                 # Alternatives
@@ -335,6 +514,60 @@ class AdvancedRecommendationEngine:
             total_weight += weight
 
         return (weighted_score / total_weight) if total_weight > 0 else 0
+
+    def _normalize_profile(self, profile: Dict) -> Dict:
+        """Normalize incoming profile dicts from DB or form into a canonical shape the engine expects.
+
+        Accepts either:
+        - DB-shaped profile: {'skills': {'coding':.., 'math':..}, 'preferred_domains':..., 'project_experience':..., ...}
+        - Form-shaped profile: {'coding_proficiency': .., 'math_comfort': .., ...}
+        Returns a dict with top-level keys used throughout the engine.
+        """
+        norm = {}
+
+        # Skills: prefer explicit top-level keys, otherwise fall back to nested 'skills' dict
+        skills = profile.get('skills') if isinstance(profile.get('skills'), dict) else {}
+
+        norm['coding_proficiency'] = profile.get('coding_proficiency') or skills.get('coding') or profile.get('coding') or 3
+        norm['math_comfort'] = profile.get('math_comfort') or skills.get('math') or profile.get('math') or 3
+        norm['creativity'] = profile.get('creativity') or skills.get('creativity') or 3
+        norm['communication_skill'] = profile.get('communication_skill') or skills.get('communication') or 3
+        norm['domain_expertise'] = profile.get('domain_expertise') or skills.get('domain_expertise') or skills.get('domain') or 2
+
+        # Preferences and metadata
+        norm['preferred_domains'] = profile.get('preferred_domains') or profile.get('preferredDomains') or []
+        norm['career_goal'] = (profile.get('career_goal') or profile.get('careerGoal') or profile.get('career'))
+        norm['project_experience_level'] = profile.get('project_experience_level') or profile.get('project_experience') or profile.get('projectExperience') or 1
+        norm['confidence_level'] = profile.get('confidence_level') or profile.get('confidence') or 2
+        norm['primary_motivation'] = profile.get('primary_motivation') or profile.get('motivation')
+        norm['completed'] = profile.get('completed', False)
+
+        # Include original for downstream uses
+        norm['_original'] = profile
+        return norm
+
+    def _extract_user_skill_names(self, profile: Dict) -> List[str]:
+        """Return a list of skill names the user has (approx) from normalized profile.
+
+        We consider a skill 'present' if the rating is >= 3.
+        """
+        skills = []
+        mapping = {
+            'coding': profile.get('coding_proficiency', 0),
+            'math': profile.get('math_comfort', 0),
+            'creativity': profile.get('creativity', 0),
+            'communication': profile.get('communication_skill', 0),
+            'domain': profile.get('domain_expertise', 0)
+        }
+        for name, val in mapping.items():
+            if val and val >= 3:
+                skills.append(name)
+        # include preferred domains as additional "skills"
+        for d in profile.get('preferred_domains', []) or []:
+            if isinstance(d, str):
+                skills.append(d.lower())
+
+        return skills
 
     def _calculate_domain_alignment(self, user_domains: List[str], path_domains: List[str]) -> float:
         """Align user domain preferences with path requirements."""
@@ -473,6 +706,56 @@ class AdvancedRecommendationEngine:
         if path_name in self.CAREER_PATHS:
             return self.CAREER_PATHS[path_name]['learning_roadmap']
         return []
+
+    def compute_skill_gap(self, user_skills, career_name: str, required_skills) -> Dict:
+        """Compute a simple skill gap analysis from lists or comma-separated strings.
+
+        Args:
+            user_skills: list or comma-separated string of user skills
+            career_name: target career name (string)
+            required_skills: list or comma-separated string of required skills
+
+        Returns:
+            dict with keys: career, fit_score, matched, missing, why, learning_roadmap
+        """
+        def normalize(input_val):
+            if not input_val:
+                return []
+            if isinstance(input_val, list):
+                return [str(x).strip().lower() for x in input_val if str(x).strip()]
+            return [s.strip().lower() for s in str(input_val).split(',') if s.strip()]
+
+        user_list = normalize(user_skills)
+        req_list = normalize(required_skills)
+
+        matched = [r for r in req_list if r in user_list]
+        missing = [r for r in req_list if r not in user_list]
+
+        fit_score = 0
+        if len(req_list) > 0:
+            fit_score = round((len(matched) / len(req_list)) * 100)
+        elif isinstance(career_name, str) and career_name in self.CAREER_PATHS:
+            # fallback to internal alignment if no explicit required list
+            # map to internal scoring by using _calculate_path_score
+            score_data = self._calculate_path_score({'coding_proficiency': 3, 'math_comfort': 3, 'creativity': 3, 'communication_skill': 3}, self.CAREER_PATHS.get(career_name))
+            fit_score = round(score_data['alignment_score'])
+
+        why = f"You match {len(matched)} of {len(req_list)} listed skill(s) for {career_name}. Focused learning on the missing skills will improve your fit and readiness."
+
+        learning_roadmap = [
+            f"Learn core concepts for: {', '.join(missing[:3])}" if missing else "Continue building on your current strengths",
+            "Apply new skills in 2–3 small projects and publish them.",
+            "Create a polished portfolio case study and practice explaining your outcomes."
+        ]
+
+        return {
+            'career': career_name,
+            'fit_score': fit_score,
+            'matched': matched,
+            'missing': missing,
+            'why': why,
+            'learning_roadmap': learning_roadmap
+        }
 
     def compare_paths(self, path1: str, path2: str, profile: Dict) -> Dict:
         """Compare two career paths for user."""

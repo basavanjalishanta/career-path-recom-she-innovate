@@ -44,6 +44,12 @@ const Navigation = ({ user, currentView, setCurrentView }) => {
           >
             💬 Mentor
           </button>
+          <button
+            className={`nav-tab ${currentView === 'profile' ? 'active' : ''}`}
+            onClick={() => setCurrentView('profile')}
+          >
+            👤 Profile
+          </button>
         </div>
 
         {/* User Menu */}

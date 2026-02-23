@@ -31,6 +31,7 @@ const RecommendationsView = ({ recommendations, profile, onBack }) => {
           <RecommendationCard
             key={idx}
             recommendation={rec}
+            profile={profile}
             isExpanded={expandedCard === idx}
             onToggle={() =>
               setExpandedCard(expandedCard === idx ? -1 : idx)

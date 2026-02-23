@@ -77,6 +77,8 @@ class UserProfile(db.Model):
     # Metadata
     completed = db.Column(db.Boolean, default=False)
     confidence_level = db.Column(db.Integer, default=2)  # 1-5
+    # Resume file path (server-side)
+    resume_path = db.Column(db.String(500), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -108,7 +110,8 @@ class UserProfile(db.Model):
             'work_environment': self.work_environment,
             'motivation': self.primary_motivation,
             'confidence': self.confidence_level,
-            'completed': self.completed
+            'completed': self.completed,
+            'resume_path': self.resume_path
         }
 
 

@@ -37,6 +37,7 @@ const Questionnaire = ({ onComplete }) => {
     primary_motivation: 'impact',
     key_concerns: [],
     confidence_level: 3,
+    resume: null,
   });
 
   const questions = [
@@ -122,6 +123,13 @@ const Questionnaire = ({ onComplete }) => {
       max: 5,
       labels: ['Very uncertain', 'Uncertain', 'Moderate', 'Confident', 'Very confident'],
     },
+    {
+      title: 'Upload Resume',
+      description: 'Upload your resume (PDF) to include with your profile (optional).',
+      type: 'file',
+      key: 'resume',
+      accept: 'application/pdf'
+    }
   ];
 
   const currentQuestion = questions[step];
@@ -214,6 +222,18 @@ const Questionnaire = ({ onComplete }) => {
         }
 
         console.log('Successfully generated recommendations:', recommendations);
+        // If resume provided upload it (best-effort) after profile update
+        if (formData.resume) {
+          try {
+            const uploadRes = await apiService.uploadResume(formData.resume);
+            console.log('Resume upload response:', uploadRes.data);
+          } catch (uploadErr) {
+            console.warn('Resume upload failed:', uploadErr?.response?.data || uploadErr.message || uploadErr);
+            // do not block recommendations, but inform user
+            setError('Profile saved, but resume upload failed. You can retry from your profile.');
+          }
+        }
+
         onComplete(recommendations);
       } else {
         const errorMsg = recsResult.data.error || 'Failed to generate recommendations';
@@ -327,6 +347,28 @@ const Questionnaire = ({ onComplete }) => {
                 {option}
               </button>
             ))}
+          </div>
+        )}
+
+        {/* File Upload */}
+        {currentQuestion.type === 'file' && (
+          <div className="file-upload-section">
+            <input
+              type="file"
+              accept={currentQuestion.accept || 'application/pdf'}
+              onChange={(e) => {
+                const f = e.target.files && e.target.files[0];
+                setFormData((prev) => ({ ...prev, [currentQuestion.key]: f }));
+              }}
+            />
+            {formData.resume && (
+              <div className="file-meta">
+                <p>Selected: {formData.resume.name}</p>
+                <button className="btn btn-outline" onClick={() => setFormData((prev) => ({ ...prev, resume: null }))}>
+                  Remove
+                </button>
+              </div>
+            )}
           </div>
         )}
       </motion.div>
