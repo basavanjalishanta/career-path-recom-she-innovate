@@ -3,7 +3,7 @@
  * Main hub after authentication - contains nav, questionnaire, recommendations, chatbot
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import Questionnaire from '../components/Questionnaire';
@@ -12,11 +12,40 @@ import ChatBot from '../components/ChatBot';
 import Navigation from '../components/Navigation';
 import '../styles/dashboard.css';
 import ProfilePage from './ProfilePage';
+import RoadmapPage from './RoadmapPage';
 
 const Dashboard = () => {
   const { user, profile } = useAuth();
   const [currentView, setCurrentView] = useState('questionnaire'); // questionnaire, recommendations, chat
   const [recommendations, setRecommendations] = useState(null);
+  const [loadingRecs, setLoadingRecs] = useState(false);
+  const apiService = require('../services/api').default;
+
+  // When user navigates to recommendations, auto-generate based on latest profile
+  useEffect(() => {
+    const fetchRecs = async () => {
+      if (currentView !== 'recommendations') return;
+      if (recommendations && recommendations.length > 0) return;
+      if (!profile) return;
+
+      try {
+        setLoadingRecs(true);
+        const res = await apiService.getRecommendations(profile);
+        if (res.data && res.data.success) {
+          const augmented = augmentRecommendations(res.data.recommendations || []);
+          setRecommendations(augmented);
+        } else {
+          console.warn('No recommendations returned', res.data);
+        }
+      } catch (err) {
+        console.error('Failed to fetch recommendations', err);
+      } finally {
+        setLoadingRecs(false);
+      }
+    };
+
+    fetchRecs();
+  }, [currentView, profile]);
 
   const handleQuestionnaireComplete = (recs) => {
     console.log('[Dashboard] Questionnaire completed with recommendations:', recs);
@@ -128,22 +157,33 @@ const Dashboard = () => {
           <div style={{display:'flex', gap:8, marginBottom:12}}>
             <button className="btn btn-secondary" onClick={() => setCurrentView('questionnaire')}>Assessment</button>
             <button className="btn btn-secondary" onClick={() => setCurrentView('recommendations')}>Recommendations</button>
+            <button className="btn btn-secondary" onClick={() => setCurrentView('roadmap')}>Roadmap</button>
             <button className="btn btn-outline" onClick={loadSampleRecommendations}>Load sample recommendations</button>
           </div>
           {currentView === 'questionnaire' && (
             <Questionnaire onComplete={handleQuestionnaireComplete} />
           )}
 
-          {currentView === 'recommendations' && recommendations && (
-            <RecommendationsView
-              recommendations={recommendations}
-              profile={profile}
-              onBack={handleRetakeAssessment}
-            />
+          {currentView === 'recommendations' && (
+            loadingRecs ? (
+              <div>Loading recommendations...</div>
+            ) : recommendations && recommendations.length > 0 ? (
+              <RecommendationsView
+                recommendations={recommendations}
+                profile={profile}
+                onBack={handleRetakeAssessment}
+              />
+            ) : (
+              <div>No recommendations available. Try taking the assessment or click "Load sample recommendations".</div>
+            )
           )}
 
           {currentView === 'profile' && (
             <ProfilePage profile={profile} />
+          )}
+
+          {currentView === 'roadmap' && (
+            <RoadmapPage profile={profile} />
           )}
 
           {currentView === 'chat' && (

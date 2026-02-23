@@ -1,4 +1,4 @@
-"""
+﻿"""
 Advanced Flask Backend API - Production Grade
 Authentication, recommendations, chatbot, and user management.
 """
@@ -18,6 +18,9 @@ from models import db, User, UserProfile, Recommendation, ChatMessage, Predefine
 from recommendation_engine import AdvancedRecommendationEngine
 from chatbot import AdvancedChatbot
 
+# Load environment variables reliably whether app is run from project root or backend folder.
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+load_dotenv(os.path.join(BASE_DIR, '.env'))
 load_dotenv()
 
 # Initialize Flask app
@@ -56,7 +59,6 @@ def ensure_resume_column():
                 if 'resume_path' not in columns:
                     print('[INFO] Adding missing column resume_path')
                     conn.execute(text("ALTER TABLE user_profiles ADD COLUMN resume_path TEXT"))
-                    conn.commit()
 
         except Exception as e:
             print(f'[WARN] Could not ensure resume_path column: {e}')
@@ -73,6 +75,7 @@ def ensure_context():
 # Initialize AI engines
 recommendation_engine = AdvancedRecommendationEngine()
 chatbot = AdvancedChatbot()
+print(f"[INFO] Chatbot LLM key linked: {bool(chatbot.groq_api_key)} | model: {chatbot.groq_model}")
 
 # Download NLTK data if needed
 try:
@@ -130,8 +133,8 @@ def signup():
         db.session.add(profile)
         db.session.commit()
 
-        # Generate token
-        access_token = create_access_token(identity=user.id)
+        # Generate token (store identity as string to ensure JWT 'sub' is a string)
+        access_token = create_access_token(identity=str(user.id))
 
         return jsonify({
             'success': True,
@@ -159,8 +162,8 @@ def login():
         if not user or not user.check_password(data['password']):
             return jsonify({'success': False, 'error': 'Invalid email or password'}), 401
 
-        # Create token
-        access_token = create_access_token(identity=user.id)
+        # Create token (store identity as string to ensure JWT 'sub' is a string)
+        access_token = create_access_token(identity=str(user.id))
 
         return jsonify({
             'success': True,
@@ -380,6 +383,111 @@ def download_resume():
 # RECOMMENDATION ROUTES
 # ============================================================
 
+def _pick_path_config(selected_skill: str, career_goal: str):
+    """Best-effort match to an existing career path config."""
+    selected = (selected_skill or '').strip().lower()
+    goal = (career_goal or '').strip().lower()
+    paths = recommendation_engine.CAREER_PATHS
+
+    for name, cfg in paths.items():
+        if name.lower() == selected:
+            return name, cfg
+
+    for name, cfg in paths.items():
+        if selected and (selected in name.lower() or name.lower() in selected):
+            return name, cfg
+
+    for name, cfg in paths.items():
+        if goal and (name.lower() in goal or any(d.lower() in goal for d in cfg.get('related_domains', []))):
+            return name, cfg
+
+    return None, None
+
+
+def _phase_duration_strings(skill_level: int, experience_level: int, study_time: int):
+    """Generate realistic phase durations from user baseline and weekly hours."""
+    readiness = (skill_level + experience_level) / 2.0
+    if readiness <= 2:
+        total_weeks = 28
+    elif readiness <= 3.5:
+        total_weeks = 22
+    else:
+        total_weeks = 16
+
+    if study_time <= 4:
+        total_weeks += 6
+    elif study_time <= 8:
+        total_weeks += 3
+    elif study_time >= 15:
+        total_weeks -= 3
+
+    total_weeks = max(10, total_weeks)
+    beginner_weeks = max(4, int(round(total_weeks * 0.35)))
+    intermediate_weeks = max(4, int(round(total_weeks * 0.40)))
+    advanced_weeks = max(3, total_weeks - beginner_weeks - intermediate_weeks)
+
+    return {
+        'beginner': f'{beginner_weeks} weeks',
+        'intermediate': f'{intermediate_weeks} weeks',
+        'advanced': f'{advanced_weeks} weeks'
+    }
+
+
+def _build_weekly_plan(study_time: int):
+    """Create a simple weekly structure based on available hours."""
+    study_time = max(3, int(study_time))
+    theory = max(1, int(round(study_time * 0.40)))
+    practice = max(1, int(round(study_time * 0.35)))
+    project = max(1, study_time - theory - practice)
+
+    return [
+        f'Monday-Tuesday ({theory}h): Learn concepts and take concise notes.',
+        f'Wednesday-Thursday ({practice}h): Hands-on exercises and coding challenges.',
+        f'Friday-Saturday ({project}h): Build project features and document progress.',
+        'Sunday (30-60 min): Weekly review, retrospective, and next-week planning.'
+    ]
+
+
+def _career_readiness_label(skill_level: int, experience_level: int):
+    score = (skill_level * 0.45) + (experience_level * 0.55)
+    if score >= 4.2:
+        return 'High - interview ready with a strong portfolio'
+    if score >= 3.2:
+        return 'Medium - close to ready with consistent project execution'
+    if score >= 2.2:
+        return 'Developing - focus on fundamentals and practical depth'
+    return 'Early stage - build core skills before specialization'
+
+
+def _normalize_text_list(value):
+    """Normalize list-like input into a lowercase list of tokens."""
+    if not value:
+        return []
+    if isinstance(value, list):
+        return [str(v).strip().lower() for v in value if str(v).strip()]
+    if isinstance(value, str):
+        return [s.strip().lower() for s in value.replace(';', ',').split(',') if s.strip()]
+    return [str(value).strip().lower()]
+
+
+def _to_skill_profile(skill_scores: dict):
+    """Map incoming skill score keys to engine profile keys."""
+    scores = skill_scores or {}
+    return {
+        'coding_proficiency': int(scores.get('coding', scores.get('coding_proficiency', 3)) or 3),
+        'math_comfort': int(scores.get('math', scores.get('math_comfort', 3)) or 3),
+        'creativity': int(scores.get('creativity', 3) or 3),
+        'communication_skill': int(scores.get('communication', scores.get('communication_skill', 3)) or 3),
+        'domain_expertise': int(scores.get('domain', scores.get('domain_expertise', 2)) or 2),
+        'leadership_potential': int(scores.get('leadership', scores.get('leadership_potential', 3)) or 3)
+    }
+
+
+def _clamp_profile_scores(profile_dict):
+    for k in ['coding_proficiency', 'math_comfort', 'creativity', 'communication_skill', 'domain_expertise', 'leadership_potential']:
+        profile_dict[k] = max(1, min(5, int(profile_dict.get(k, 3))))
+    return profile_dict
+
 @app.route('/api/recommendations', methods=['POST'])
 @jwt_required()
 def get_recommendations():
@@ -410,7 +518,12 @@ def get_recommendations():
                 if v is not None:
                     profile_dict[k] = v
 
-        print(f'[INFO] Generating recommendations for user {user_id} with profile: {profile_dict}')
+        # Debug: print what was received and the final profile used for recommendations
+        try:
+            print(f'[DEBUG] /api/recommendations request_data: {request_data}')
+            print(f'[DEBUG] /api/recommendations profile_dict (merged): {profile_dict}')
+        except Exception:
+            pass
 
         # Generate recommendations using merged profile (assessment data overrides stored profile)
         recommendations = recommendation_engine.get_recommendations(profile_dict)
@@ -531,10 +644,327 @@ def compute_skill_gap():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@app.route('/api/recommendations/advanced', methods=['POST'])
+@jwt_required()
+def advanced_recommendations():
+    """Advanced recommendation output using assessment + resume extracted details."""
+    try:
+        data = request.get_json() or {}
+
+        # Assessment inputs
+        skill_scores = data.get('skill_scores') or {}
+        preferred_domains = data.get('preferred_domains') or []
+        career_goal = data.get('career_goal')
+        confidence_level = int(data.get('confidence_level', 2) or 2)
+        experience_level = int(data.get('experience_level', 2) or 2)
+
+        # Resume extracted inputs
+        resume_skills = _normalize_text_list(data.get('resume_skills'))
+        resume_projects = _normalize_text_list(data.get('resume_projects'))
+        resume_tools = _normalize_text_list(data.get('resume_tools'))
+        resume_certifications = _normalize_text_list(data.get('resume_certifications'))
+
+        # Normalize profile for the existing recommendation engine.
+        base_profile = _to_skill_profile(skill_scores)
+        profile = _clamp_profile_scores({
+            **base_profile,
+            'preferred_domains': preferred_domains if isinstance(preferred_domains, list) else _normalize_text_list(preferred_domains),
+            'career_goal': career_goal,
+            'confidence_level': max(1, min(5, confidence_level)),
+            'project_experience_level': max(1, min(5, experience_level)),
+            'skills': {
+                'coding': base_profile['coding_proficiency'],
+                'math': base_profile['math_comfort'],
+                'creativity': base_profile['creativity'],
+                'communication': base_profile['communication_skill'],
+                'domain_expertise': base_profile['domain_expertise']
+            }
+        })
+
+        recs = recommendation_engine.get_recommendations(profile)
+        if not recs:
+            return jsonify({'success': False, 'error': 'Could not generate recommendations'}), 500
+
+        top3 = recs[:3]
+        top_careers = [
+            {'career': r.get('career_path', ''), 'alignment_score': int(round(float(r.get('alignment_score', 0))))}
+            for r in top3
+        ]
+        best = top3[0]
+        best_path = best.get('career_path')
+        best_cfg = recommendation_engine.CAREER_PATHS.get(best_path, {})
+
+        # Strongest competencies from assessment + resume overlap.
+        score_label_map = {
+            'coding_proficiency': 'coding',
+            'math_comfort': 'math',
+            'creativity': 'creativity',
+            'communication_skill': 'communication',
+            'domain_expertise': 'domain'
+        }
+        sorted_scores = sorted(
+            [(score_label_map[k], v) for k, v in base_profile.items() if k in score_label_map],
+            key=lambda x: x[1],
+            reverse=True
+        )
+        strongest_skills = []
+        for name, level in sorted_scores:
+            marker = 'resume-validated' if name in resume_skills else 'assessment-strong'
+            strongest_skills.append(f"{name} ({level}/5, {marker})")
+        strongest_skills = strongest_skills[:4]
+
+        # Skill gaps based on top path requirements.
+        required = list((best_cfg.get('required_skills') or {}).keys())
+        alias = {'communication': 'communication_skill', 'math': 'math_comfort', 'coding': 'coding_proficiency', 'domain': 'domain_expertise'}
+        skill_gaps = []
+        for req in required:
+            key = alias.get(req, req)
+            level = int(base_profile.get(key, 2))
+            present_in_resume = req in resume_skills
+            if level < 3 or not present_in_resume:
+                gap_reason = []
+                if level < 3:
+                    gap_reason.append(f'current level {level}/5')
+                if not present_in_resume:
+                    gap_reason.append('not evidenced in resume')
+                skill_gaps.append(f"{req}: {', '.join(gap_reason)}")
+        if not skill_gaps:
+            skill_gaps = ['No major foundational gaps; focus on deeper project depth and specialization.']
+
+        # Assessment-resume consistency and AI confidence.
+        assessed_present = set([name for name, level in sorted_scores if level >= 3])
+        resume_present = set(resume_skills)
+        overlap = len(assessed_present & resume_present)
+        denom = max(1, len(assessed_present))
+        consistency_pct = int(round((overlap / denom) * 100))
+        completeness_checks = [
+            bool(skill_scores),
+            bool(preferred_domains),
+            bool(career_goal),
+            bool(resume_skills),
+            bool(resume_projects or resume_tools or resume_certifications)
+        ]
+        completeness_pct = int(round((sum(1 for c in completeness_checks if c) / len(completeness_checks)) * 100))
+        top_alignment = int(round(float(best.get('alignment_score', 0))))
+        ai_confidence_score = int(round((0.45 * top_alignment) + (0.30 * consistency_pct) + (0.25 * completeness_pct)))
+        ai_confidence_score = max(0, min(100, ai_confidence_score))
+
+        why_this_career = (
+            f"{best_path} fits because your profile aligns at {top_alignment}% with required competencies, "
+            f"your strongest areas are {', '.join([s.split(' (')[0] for s in strongest_skills[:3]])}, "
+            "and the path matches your stated goals and domain preferences."
+        )
+
+        roadmap_steps = list(best_cfg.get('learning_roadmap', []))
+        beginner = roadmap_steps[:2] or ['Build fundamentals', 'Practice core workflows']
+        intermediate = roadmap_steps[2:4] or ['Apply concepts in projects', 'Improve quality and testing']
+        advanced = roadmap_steps[4:] or ['Ship production-grade capstone', 'Prepare portfolio and interviews']
+
+        improvement_suggestions = [
+            'Close top 2 skill gaps with weekly focused practice blocks.',
+            'Convert resume skills into measurable project outcomes (metrics, impact, scale).',
+            'Add one portfolio project per phase with README, architecture notes, and demo.',
+            'Target interviews with roles aligned to your top recommended career path.'
+        ]
+
+        market_demand = (best_cfg.get('market_demand') or 'stable').lower()
+        if market_demand == 'high':
+            market_trend = 'High demand trend: strong hiring momentum and broad role availability.'
+        elif market_demand in ['growing', 'emerging']:
+            market_trend = 'Growing trend: rising demand with increasing opportunities over the next 12-24 months.'
+        else:
+            market_trend = 'Stable trend: consistent opportunities, with advantage for specialized portfolios.'
+
+        response = {
+            "ai_confidence_score": ai_confidence_score,
+            "top_careers": top_careers,
+            "strongest_skills": strongest_skills,
+            "skill_gaps": skill_gaps,
+            "why_this_career": why_this_career,
+            "improvement_suggestions": improvement_suggestions,
+            "roadmap": {
+                "beginner": beginner,
+                "intermediate": intermediate,
+                "advanced": advanced
+            },
+            "estimated_timeline": best.get('timeline_estimate', '6-12 months'),
+            "market_trend": market_trend
+        }
+
+        return jsonify(response), 200
+
+    except Exception as e:
+        print(f'[ERROR] advanced_recommendations exception: {str(e)}')
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 # ============================================================
 # CHATBOT ROUTES
 # ============================================================
 
+
+
+@app.route('/api/learning-roadmap', methods=['POST'])
+@jwt_required()
+def generate_learning_roadmap():
+    """Generate a structured 3-phase learning roadmap and project plan."""
+    try:
+        data = request.get_json() or {}
+
+        selected_skill = (data.get('selected_skill') or data.get('career') or '').strip()
+        skill_level = int(data.get('skill_level', 1))
+        experience_level = int(data.get('experience_level', 1))
+        study_time = int(data.get('study_time', 6))
+        career_goal = (data.get('career_goal') or '').strip()
+
+        generic_terms = {'job', 'career', 'work', 'employment'}
+        if not selected_skill or selected_skill.lower() in generic_terms:
+            return jsonify({
+                'success': False,
+                'error': 'selected_skill must be a specific career path (e.g., AI Engineer, Data Analyst).'
+            }), 400
+
+        skill_level = max(1, min(5, skill_level))
+        experience_level = max(1, min(5, experience_level))
+        study_time = max(1, min(40, study_time))
+
+        path_name, cfg = _pick_path_config(selected_skill, career_goal)
+
+        if cfg:
+            roadmap_steps = cfg.get('learning_roadmap', [])
+            beginner_skills = roadmap_steps[:2] or ['Core fundamentals', 'Essential tooling']
+            intermediate_skills = roadmap_steps[2:4] or ['Applied workflows', 'Project architecture']
+            advanced_skills = roadmap_steps[4:] or ['Production practices', 'Leadership and scaling']
+
+            importance = (
+                f"{path_name} is important because it has {cfg.get('market_demand', 'strong')} market demand, "
+                f"translates directly into real products, and opens paths such as {', '.join(cfg.get('job_titles', [])[:3])}."
+            )
+            tools_required = list(dict.fromkeys(
+                ['Git/GitHub', 'VS Code', 'Documentation and note-taking tools'] +
+                cfg.get('related_domains', []) +
+                [path_name]
+            ))
+            career_opportunities = cfg.get('job_titles', [])[:5]
+            beginner_project_titles = cfg.get('beginner_projects', [])[:3]
+            intermediate_project_titles = cfg.get('intermediate_projects', [])[:3]
+        else:
+            path_name = selected_skill
+            beginner_skills = ['Foundational concepts', 'Core tools and setup']
+            intermediate_skills = ['Applied techniques', 'Systematic problem-solving']
+            advanced_skills = ['Scalable architecture', 'Portfolio polish and specialization']
+            importance = (
+                f"{selected_skill} is important because it improves problem-solving, boosts employability, "
+                "and creates opportunities to build impactful products."
+            )
+            tools_required = ['Git/GitHub', 'VS Code', 'Roadmap.sh', 'Kaggle/Udemy/Coursera', 'Portfolio site']
+            career_opportunities = ['Junior Specialist', 'Associate Engineer', 'Analyst', 'Consultant', 'Freelancer']
+            beginner_project_titles = [
+                f'{selected_skill} starter challenge app',
+                f'Interactive {selected_skill} mini dashboard',
+                f'{selected_skill} automation utility'
+            ]
+            intermediate_project_titles = [
+                f'{selected_skill} workflow manager',
+                f'Real-time {selected_skill} tracker',
+                f'{selected_skill} collaboration platform'
+            ]
+
+        durations = _phase_duration_strings(skill_level, experience_level, study_time)
+
+        # Add top career recommendations based on current skill profile.
+        rec_profile = {
+            'coding_proficiency': skill_level,
+            'math_comfort': skill_level,
+            'creativity': skill_level,
+            'communication_skill': max(1, min(5, round((skill_level + experience_level) / 2))),
+            'domain_expertise': max(1, min(5, experience_level)),
+            'project_experience_level': experience_level,
+            'confidence_level': max(1, min(5, round((skill_level + experience_level) / 2))),
+            'career_goal': career_goal or 'job',
+            'preferred_domains': cfg.get('related_domains', []) if cfg else []
+        }
+        recs = recommendation_engine.get_recommendations(rec_profile)[:3]
+        recommended_careers = [
+            {
+                'career': r.get('career_path'),
+                'alignment_score': int(round(float(r.get('alignment_score', 0))))
+            }
+            for r in recs
+        ]
+
+        response = {
+            'career': path_name,
+            'importance': importance,
+            'roadmap': {
+                'beginner': {
+                    'duration': durations['beginner'],
+                    'skills': beginner_skills,
+                    'concepts': [
+                        'Terminology and foundational mental models',
+                        'Core workflows and best practices',
+                        'How to break big problems into small tasks'
+                    ],
+                    'exercises': [
+                        'Complete daily focused drills (30-45 minutes).',
+                        'Rebuild one tutorial project from scratch without copying.',
+                        'Write short summaries after each learning session.'
+                    ]
+                },
+                'intermediate': {
+                    'duration': durations['intermediate'],
+                    'skills': intermediate_skills,
+                    'concepts': [
+                        'Design patterns and tradeoffs',
+                        'Debugging, testing, and quality control',
+                        'Performance, reliability, and maintainability'
+                    ],
+                    'exercises': [
+                        'Build reusable modules/components.',
+                        'Add tests, logs, and validation to existing projects.',
+                        'Refactor one project for readability and scalability.'
+                    ]
+                },
+                'advanced': {
+                    'duration': durations['advanced'],
+                    'skills': advanced_skills,
+                    'concepts': [
+                        'System design and production readiness',
+                        'Security, monitoring, and deployment strategy',
+                        'Mentorship, communication, and impact storytelling'
+                    ],
+                    'exercises': [
+                        'Design and build an end-to-end capstone project.',
+                        'Perform code reviews and architecture walkthroughs.',
+                        'Prepare a portfolio case study with measurable outcomes.'
+                    ]
+                }
+            },
+            'projects': {
+                'beginner': beginner_project_titles,
+                'intermediate': intermediate_project_titles,
+                'advanced': [
+                    f'Capstone 1: Production-grade {path_name} solution with documentation and deployment',
+                    f'Capstone 2: Real-world {path_name} project integrated with analytics, testing, and CI/CD'
+                ]
+            },
+            'tools_required': tools_required,
+            'weekly_plan': _build_weekly_plan(study_time),
+            'milestones': [
+                'Milestone 1: Complete beginner phase exercises and 3 beginner projects.',
+                'Milestone 2: Ship 3 intermediate projects with testing and documentation.',
+                'Milestone 3: Deliver 2 advanced capstones and portfolio-ready case studies.'
+            ],
+            'career_opportunities': career_opportunities,
+            'career_readiness_level': _career_readiness_label(skill_level, experience_level),
+            'recommended_careers': recommended_careers
+        }
+
+        return jsonify({'success': True, 'roadmap_plan': response}), 200
+
+    except Exception as e:
+        print(f'[ERROR] generate_learning_roadmap exception: {str(e)}')
+        return jsonify({'success': False, 'error': str(e)}), 500
 @app.route('/api/chat', methods=['POST'])
 @jwt_required()
 def chat():
@@ -591,7 +1021,9 @@ def chat():
             'sentiment': response['sentiment'],
             'intent': response['intent'],
             'follow_up': response['follow_up'],
-            'guidance_type': response['guidance_type']
+            'guidance_type': response['guidance_type'],
+            'llm_used': response.get('llm_used', False),
+            'llm_error': response.get('llm_error')
         }), 200
 
     except Exception as e:
@@ -675,3 +1107,4 @@ if __name__ == '__main__':
         host='0.0.0.0',
         port=5000
     )
+

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Navigation Component
  * Header with user menu and navigation buttons
  */
@@ -49,6 +49,12 @@ const Navigation = ({ user, currentView, setCurrentView }) => {
             onClick={() => setCurrentView('profile')}
           >
             👤 Profile
+          </button>
+          <button
+            className={`nav-tab ${currentView === 'roadmap' ? 'active' : ''}`}
+            onClick={() => setCurrentView('roadmap')}
+          >
+            🗺️ Roadmap
           </button>
         </div>
 

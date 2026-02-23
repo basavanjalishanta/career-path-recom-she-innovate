@@ -1,0 +1,83 @@
+.roadmap-page {
+  color: #e6eef8;
+}
+
+.roadmap-header {
+  margin-bottom: 14px;
+}
+
+.roadmap-grid {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.roadmap-card {
+  background: #0f1724;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  padding: 14px;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.45);
+}
+
+.roadmap-form {
+  display: grid;
+  gap: 10px;
+}
+
+.roadmap-form label {
+  display: grid;
+  gap: 6px;
+  font-size: 0.92rem;
+}
+
+.roadmap-form input {
+  background: rgba(10, 18, 34, 0.9);
+  color: #e6eef8;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.roadmap-error {
+  color: #ff9a9a;
+  margin-top: 10px;
+}
+
+.tips-list {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 8px;
+}
+
+.phase-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 10px 0 14px;
+}
+
+.phase-card {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.json-box {
+  background: #071428;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 12px;
+  overflow: auto;
+  max-height: 280px;
+}
+
+@media (max-width: 980px) {
+  .roadmap-grid,
+  .phase-grid {
+    grid-template-columns: 1fr;
+  }
+}

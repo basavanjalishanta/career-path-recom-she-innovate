@@ -70,10 +70,14 @@ const ChatBot = ({ recommendations }) => {
       const response = await apiService.sendMessage(inputValue);
 
       if (response.data.success) {
+        const llmNote =
+          response.data.llm_used === false && response.data.llm_error
+            ? `\n\n[LLM fallback reason: ${response.data.llm_error}]`
+            : '';
         const botMessage = {
           id: messages.length + 1,
           sender: 'bot',
-          content: response.data.response,
+          content: `${response.data.response}${llmNote}`,
           sentiment: response.data.sentiment,
           timestamp: new Date(),
         };
@@ -81,11 +85,15 @@ const ChatBot = ({ recommendations }) => {
         setMessages((prev) => [...prev, botMessage]);
       }
     } catch (err) {
+      const backendError =
+        err?.response?.data?.error ||
+        err?.response?.data?.llm_error ||
+        err?.message ||
+        'Unknown error';
       const errorMessage = {
         id: messages.length + 1,
         sender: 'bot',
-        content:
-          "I encountered an error processing your message. Please try again.",
+        content: `I encountered an error processing your message: ${backendError}`,
         timestamp: new Date(),
       };
 

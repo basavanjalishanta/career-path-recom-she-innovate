@@ -55,6 +55,7 @@ const apiService = {
 
   // ==================== RECOMMENDATIONS ====================
   getRecommendations: (data) => api.post('/recommendations', data),
+  getAdvancedRecommendations: (data) => api.post('/recommendations/advanced', data),
   fetchRecommendations: () => api.get('/recommendations'),
   compareRecommendations: (path1, path2) => api.get(`/recommendations/${path1}/compare/${path2}`),
 
@@ -68,6 +69,7 @@ const apiService = {
   getDomains: () => api.get('/domains'),
   // ==================== SKILL GAP ====================
   skillGap: (data) => api.post('/skillgap', data),
+  generateLearningRoadmap: (data) => api.post('/learning-roadmap', data),
   // ==================== UPLOADS ====================
   uploadResume: (file) => {
     const form = new FormData();
