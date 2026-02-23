@@ -1,0 +1,40 @@
+{
+  "name": "career-path-premium",
+  "version": "2.0.0",
+  "description": "Premium AI-Based Career and Project Path Recommendation System",
+  "private": true,
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.14.0",
+    "axios": "^1.4.0",
+    "framer-motion": "^10.16.0",
+    "react-chartjs-2": "^4.3.1",
+    "chart.js": "^3.9.1",
+    "@headlessui/react": "^1.7.16",
+    "react-scripts": "5.0.1"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  }
+}
